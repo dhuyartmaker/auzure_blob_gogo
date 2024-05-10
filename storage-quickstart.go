@@ -56,7 +56,7 @@ func Upload(fileName string, containerName string, new_file_name string, retry i
 	_, err = client.UploadFile(context.Background(), containerName, new_file_name, nil, nil)
 
 	if err != nil {
-		return Upload(fileName, containerName, new_file_name, retry + 1)
+		return Upload(fileName, containerName, new_file_name, retry+1)
 	}
 	return err
 }
@@ -68,8 +68,8 @@ func handleError(err error) {
 }
 
 type FileName struct {
-	path			string
-	new_file_name	string
+	path          string
+	new_file_name string
 }
 
 type WorkerPool struct {
@@ -96,11 +96,11 @@ func (wp *WorkerPool) Start() {
 }
 
 func (wp *WorkerPool) Wait() {
-	close(wp.jobs)
 	wp.wg.Wait()
 }
 
 func (wp *WorkerPool) worker() {
+	wp.wg.Add(1)
 	for job := range wp.jobs {
 		// Đọc tệp hình ảnh và gửi lên Azure Storage
 		err := processImage(job)
@@ -108,6 +108,7 @@ func (wp *WorkerPool) worker() {
 			fmt.Printf("Error processing image %s: %v", job.new_file_name, err)
 		}
 	}
+	fmt.Printf("Done\n")
 	wp.wg.Done()
 }
 
@@ -140,7 +141,10 @@ func readDirectoryRecursive(directoryPath string, wp *WorkerPool, count *int) er
 	if err != nil {
 		return err
 	}
+	defer fmt.Print("----------------End---------------\n")
 	defer dir.Close()
+	defer close(wp.jobs)
+
 
 	// Đọc tất cả các mục trong thư mục
 	items, err := dir.Readdir(-1)
@@ -184,7 +188,7 @@ func main() {
 
 	directoryPath := "BACKUP_HINHANH/"
 
-	wp := NewWorkerPool(10)
+	wp := NewWorkerPool(8)
 	// Khởi động worker pool
 	wp.Start()
 	count := 0
